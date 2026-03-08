@@ -10,7 +10,8 @@
         .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #111; font-size: 18px; margin-bottom: 20px; }
         label { font-size: 14px; font-weight: bold; display: block; margin-bottom: 5px; }
-        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        /* input[type="number"] を追加して、学籍番号欄のデザイン崩れを防ぎます */
+        input[type="text"], input[type="number"] { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
         button { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
         button:disabled { background-color: #ccc; }
     </style>
@@ -20,7 +21,7 @@
         <h2>クラス委員公式 情報登録</h2>
         <form id="registerForm">
             <label for="studentId">学籍番号</label>
-            <input type="text" id="studentId" placeholder="例: 12345" required>
+            <input type="number" id="studentId" placeholder="例: 12345" inputmode="numeric" pattern="\d*" required>
 
             <label for="name">氏名（フルネーム）</label>
             <input type="text" id="name" placeholder="例: 医大 太郎" required>
@@ -30,12 +31,12 @@
     </div>
 
     <script>
-        // ====== 以下の2箇所を、取得したIDとURLに書き換えてください ======
+        // 設定済みのIDとURL
         const LIFF_ID = "2009365737-7RY5afFY"; 
         const GAS_URL = "https://script.google.com/macros/s/AKfycbx1LWj4KBXflawzYEj9PKfuNvCHD2awsj7Tj9mbBiGny9VlyRBpeaXlqPrUmrT8UUWk/exec";
-        // =================================================================
 
         let userId = "";
+        let lineName = ""; // LINE名用の変数を追加
         const submitBtn = document.getElementById('submitBtn');
 
         // 1. LIFFの初期化
@@ -43,9 +44,10 @@
             if (!liff.isLoggedIn()) {
                 liff.login(); // ログインしていなければログイン画面へ
             } else {
-                // 2. LINEのユーザーIDを取得
+                // 2. LINEのユーザーIDと名前を取得
                 liff.getProfile().then(profile => {
                     userId = profile.userId;
+                    lineName = profile.displayName; // LINEの表示名を取得
                 }).catch(err => console.error("Profile Error:", err));
             }
         }).catch(err => {
@@ -62,6 +64,14 @@
             const studentId = document.getElementById('studentId').value;
             const name = document.getElementById('name').value;
 
+            // 学籍番号が半角数字（整数）だけで構成されているかチェック
+            if (!/^\d+$/.test(studentId)) {
+                alert("学籍番号は半角数字で入力してください。");
+                submitBtn.disabled = false;
+                submitBtn.innerText = "登録する";
+                return;
+            }
+
             if (!userId) {
                 alert("LINEのユーザー情報が取得できません。少し待ってから再度お試しください。");
                 submitBtn.disabled = false;
@@ -69,15 +79,15 @@
                 return;
             }
 
-            // 送信するデータ
+            // 送信するデータ（LINE名を追加）
             const data = {
                 userId: userId,
                 studentId: studentId,
-                name: name
+                name: name,
+                lineName: lineName 
             };
 
             // 4. GASへデータを送信 (POST)
-            // ※GASのCORSエラーを防ぐため、Content-Typeヘッダーは意図的に設定していません
             fetch(GAS_URL, {
                 method: 'POST',
                 body: JSON.stringify(data)
