@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>匿名ご意見箱</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background-color: #f5f5f5; }
+    .container { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #333; font-size: 1.2rem; }
+    p { font-size: 0.9rem; color: #666; line-height: 1.5; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: #333; }
+    .badge-optional { background-color: #999; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
+    .badge-required { background-color: #e53935; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
+    input[type="text"], textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; margin-bottom: 20px; }
+    textarea { resize: vertical; } /* 縦方向のみサイズ変更可能に */
+    button { width: 100%; padding: 12px; background-color: #06C755; color: white; border: none; border-radius: 5px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+    button:disabled { background-color: #ccc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📮 クラスご意見箱</h2>
+    <p>クラス運営やシケタイに関するご意見・ご要望をお書きください。<br>
+    <small>※イタズラ防止のため送信元LINEアカウントは記録されますが、委員内で厳重に管理し、クラス内に漏れることは絶対にありません。</small></p>
+    
+    <label for="opinionSubject">件名<span class="badge-optional">任意</span></label>
+    <input type="text" id="opinionSubject" placeholder="例：〇〇の課題について（短文）">
+
+    <label for="opinionText">ご意見・ご要望<span class="badge-required">必須</span></label>
+    <textarea id="opinionText" rows="6" placeholder="詳しい内容を記入してください（文字数制限なし）"></textarea>
+    
+    <button id="submitBtn" onclick="submitOpinion()">送信する</button>
+  </div>
+
+  <script>
+    // ▼ 1. ここに新しいLIFF IDと、GASのURLを貼り付けます！
+    const LIFF_ID = "2009365737-dGbTzpYs";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbx1LWj4KBXflawzYEj9PKfuNvCHD2awsj7Tj9mbBiGny9VlyRBpeaXlqPrUmrT8UUWk/exec";
+
+    liff.init({ liffId: LIFF_ID }).then(() => {
+      if (!liff.isLoggedIn()) { liff.login(); }
+    });
+
+    async function submitOpinion() {
+      const subject = document.getElementById("opinionSubject").value;
+      const text = document.getElementById("opinionText").value;
+      
+      // 必須チェック（内容が空なら弾く）
+      if (!text) {
+        alert("「ご意見・ご要望」を入力してください🙇‍♂️");
+        return;
+      }
+
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.innerText = "送信中...";
+
+      try {
+        const profile = await liff.getProfile();
+        
+        // ★件名（subject）も一緒に送る！
+        const payload = {
+          type: "opinion",
+          userId: profile.userId,
+          lineName: profile.displayName,
+          subject: subject, 
+          opinion: text
+        };
+
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          alert("送信完了しました！貴重なご意見ありがとうございます✨");
+          liff.closeWindow(); 
+        } else {
+          throw new Error("送信に失敗しました");
+        }
+      } catch (error) {
+        alert("エラーが発生しました。時間を置いて再度お試しください。");
+        btn.disabled = false;
+        btn.innerText = "送信する";
+      }
+    }
+  </script>
+</body>
+</html>
